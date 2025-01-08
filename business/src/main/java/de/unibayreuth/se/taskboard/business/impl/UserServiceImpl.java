@@ -28,7 +28,7 @@ public class UserServiceImpl implements UserService {
         if (user.getId() != null) {
             throw new IllegalArgumentException("User ID must not be set.");
         }
-        return user;
+        return upsert(user);
     }
 
     @Override
@@ -40,6 +40,11 @@ public class UserServiceImpl implements UserService {
     public User getById(UUID id) {
         return userPersistenceService.getById(id)
                 .orElseThrow(() -> new IllegalArgumentException("User with ID " + id + " does not exist."));
+    }
+
+    @Override
+    public User upsert(User user) {
+        return userPersistenceService.upsert(user);
     }
     
 }

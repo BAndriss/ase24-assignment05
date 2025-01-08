@@ -1,12 +1,16 @@
 package de.unibayreuth.se.taskboard;
 
 import de.unibayreuth.se.taskboard.api.dtos.TaskDto;
+import de.unibayreuth.se.taskboard.api.dtos.UserDto;
 import de.unibayreuth.se.taskboard.api.mapper.TaskDtoMapper;
+import de.unibayreuth.se.taskboard.api.mapper.UserDtoMapper;
 import de.unibayreuth.se.taskboard.business.domain.Task;
+import de.unibayreuth.se.taskboard.business.domain.User;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static io.restassured.RestAssured.given;
@@ -19,6 +23,8 @@ public class TaskBoardSystemTests extends AbstractSystemTest {
 
     @Autowired
     private TaskDtoMapper taskDtoMapper;
+    @Autowired
+    private UserDtoMapper userDtoMapper;
 
     @Test
     void getAllCreatedTasks() {
@@ -65,5 +71,60 @@ public class TaskBoardSystemTests extends AbstractSystemTest {
 
     }
 
-    //TODO: Add at least one test for each new endpoint in the users controller (the create endpoint can be tested as part of the other endpoints).
+    //For creating test I used ChatGPT and JetBrains AI Assistant
+    @Test
+    void getAllCreatedUser() {
+        List<User> createdUsers = TestFixtures.createUsers(userService);
+
+        List<User> retrievedUser = given()
+                .contentType(ContentType.JSON)
+                .when()
+                .get("/api/users")
+                .then()
+                .statusCode(200)
+                .body(".", hasSize(createdUsers.size()))
+                .and()
+                .extract().jsonPath().getList("$", UserDto.class)
+                .stream()
+                .map(userDtoMapper::toBusiness)
+                .toList();
+
+        assertThat(retrievedUser)
+                .usingRecursiveFieldByFieldElementComparatorIgnoringFields("createdAt") // prevent issues due to differing timestamps after conversions
+                .containsExactlyInAnyOrderElementsOf(createdUsers);
+    }
+
+    @Test
+    void getUserById(){
+        User user = userService.create(TestFixtures.getUsers().getFirst());
+
+        UserDto retrievedUserDto = given()
+                .contentType(ContentType.JSON)
+                .when()
+                .get("/api/users/{id}", user.getId())
+                .then()
+                .statusCode(200)
+                .extract().as(UserDto.class);
+        User retrievedUser = userDtoMapper.toBusiness(retrievedUserDto);
+        assertThat(retrievedUser.getId()).isEqualTo(user.getId());
+        assertThat(retrievedUser.getName()).isEqualTo(user.getName());
+    }
+
+    @Test
+    void createUser() {
+        userService.clear();
+        String name = "TestUser";
+        UserDto requestBody = new UserDto(null, name, LocalDateTime.now());
+        UserDto createdUserDto = given()
+                .contentType(ContentType.JSON)
+                .body(requestBody)
+                .when()
+                .post("/api/users")
+                .then()
+                .statusCode(200)
+                .extract().as(UserDto.class);
+
+        assertThat(createdUserDto.name()).isEqualTo(name);
+        assertThat(createdUserDto.id()).isNotNull();
+    }
 }
