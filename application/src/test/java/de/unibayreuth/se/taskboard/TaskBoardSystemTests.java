@@ -124,7 +124,7 @@ public class TaskBoardSystemTests extends AbstractSystemTest {
                 .statusCode(200)
                 .extract().as(UserDto.class);
 
-        assertThat(createdUserDto.name()).isEqualTo(name);
-        assertThat(createdUserDto.id()).isNotNull();
+        assertThat(createdUserDto.getName()).isEqualTo(name);
+        assertThat(createdUserDto.getId()).isNotNull();
     }
 }
